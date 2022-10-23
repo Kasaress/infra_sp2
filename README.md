@@ -34,7 +34,7 @@ docker-compose exec web python manage.py collectstatic --no-input
 
 **Заполнить базу данными из копии:**
 ```bash
-docker-compose exec web python manage.py loaddata dump.json 
+docker-compose exec web python manage.py loaddata ../infra/fixtures.json 
 ```
 
 
