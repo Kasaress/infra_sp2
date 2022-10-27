@@ -86,9 +86,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ru-ru'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Moscow'
 
 USE_I18N = True
 
@@ -152,6 +152,15 @@ SIMPLE_JWT = {
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
 CONTACT_EMAIL = os.getenv('CONTACT_EMAIL')
-# CONTACT_EMAIL = "bujhvh@mail.ru"
 
 CONFIRMATION_CODE_LEN = 5
+USER = 'user'
+MODERATOR = 'moderator'
+ADMIN = 'admin'
+SHORT_TEXT_LENGTH = 15
+NAME_LENGTH = 256
+SLUG_LENGTH = 50
+USER_NAMES_LENGTH = 150
+EMAIL_LENGTH = 254
+MIN_SCORE = 1
+MAX_SCORE = 10

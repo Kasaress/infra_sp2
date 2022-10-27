@@ -1,58 +1,52 @@
-import datetime as dt
-
-from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-
-User = get_user_model()
-
-
-def validate_year(value):
-    if value > dt.datetime.now().year:
-        raise ValidationError(
-            'Значение года не может быть больше текущего')
-    return value
+from reviews.validators import validate_year
+from users.models import CustomUser as User
 
 
 class GenreCategory(models.Model):
-    name = models.CharField(max_length=50,)
-    slug = models.SlugField(max_length=50, unique=True)
+    name = models.CharField(max_length=settings.NAME_LENGTH,)
+    slug = models.SlugField(max_length=settings.SLUG_LENGTH, unique=True)
 
     class Meta:
         abstract = True
-
-
-class Genre(GenreCategory):
-    """Жанры произведений."""
-    class Meta:
         ordering = ['-id']
-        verbose_name = 'Жанр'
+        verbose_name = 'Жанр-Категория'
+        verbose_name_plural = 'Жанры-Категории'
 
     def __str__(self):
         return self.name
 
 
+class Genre(GenreCategory):
+    """Жанры произведений."""
+    class Meta(GenreCategory.Meta):
+        verbose_name = 'Жанр'
+        verbose_name_plural = 'Жанры'
+
+
 class Category(GenreCategory):
     """Категории произведение."""
-    class Meta:
-        ordering = ['-id']
+    class Meta(GenreCategory.Meta):
         verbose_name = 'Категория'
+        verbose_name_plural = 'Категории'
 
 
 class Title(models.Model):
     """Произведения."""
-    name = models.CharField(max_length=256)
+    name = models.CharField(max_length=settings.NAME_LENGTH)
     year = models.PositiveIntegerField(
         validators=[validate_year],
-        verbose_name='Год выпуска'
+        verbose_name='Год выпуска',
+        db_index=True
     )
     description = models.TextField(blank=True, null=True)
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
         related_name='titles',
-        verbose_name='Категория',
+        verbose_name='Категории',
         blank=True,
         null=True,
         help_text='Выберите категорию',
@@ -60,12 +54,14 @@ class Title(models.Model):
     genre = models.ManyToManyField(
         Genre,
         through='GenreTitle',
-        verbose_name='Жанр',
+        verbose_name='Жанры',
         help_text='Выберите жанр'
     )
 
     class Meta:
         verbose_name = 'Произведение'
+        verbose_name_plural = 'Произведения'
+        ordering = ('name',)
 
     def __str__(self):
         return self.name
@@ -94,6 +90,10 @@ class ParentingModel(models.Model):
 
     class Meta:
         abstract = True
+        ordering = ['-pub_date']
+
+    def __str__(self):
+        return self.text[:settings.SHORT_TEXT_LENGTH]
 
 
 class Review(ParentingModel):
@@ -103,15 +103,20 @@ class Review(ParentingModel):
         on_delete=models.CASCADE,
         related_name='reviews'
     )
-    score = models.IntegerField(
-        validators=[MinValueValidator(1),
-                    MaxValueValidator(10)]
+    score = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(settings.MIN_SCORE),
+                    MaxValueValidator(settings.MAX_SCORE)]
     )
 
-    class Meta:
+    class Meta(ParentingModel.Meta):
         ordering = ['-id']
-        verbose_name = 'Отзывы'
-        unique_together = ('author', 'title',)
+        verbose_name = 'Отзыв'
+        verbose_name_plural = 'Отзывы'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('title', 'author',),
+                name='unique review'
+            )]
 
 
 class Comment(ParentingModel):
@@ -122,7 +127,7 @@ class Comment(ParentingModel):
         related_name="comments"
     )
 
-    class Meta:
+    class Meta(ParentingModel.Meta):
         ordering = ['-id']
-        verbose_name = 'Комментарии'
-        ordering = ['id', ]
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
