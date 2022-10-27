@@ -63,7 +63,7 @@ class CustomUser(AbstractUser, UserValidatorMixin):  # type: ignore
         blank=True
     )
     role: str = models.CharField(
-        max_length=len(max(ROLE_CHOICES)),
+        max_length=max((len(role) for role, _ in ROLE_CHOICES)),
         choices=ROLE_CHOICES,
         default='user'
     )
