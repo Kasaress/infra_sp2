@@ -6,12 +6,13 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+
+from reviews import validators
 from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import CustomUser as User
-from users.models import UserValidatorMixin
 
 
-class SignUpSerializer(serializers.Serializer, UserValidatorMixin):
+class SignUpSerializer(serializers.Serializer, validators.UserValidatorMixin):
     """Сериалайзер для регистрации."""
     email = serializers.EmailField(
         max_length=settings.EMAIL_LENGTH, required=True,
@@ -26,7 +27,7 @@ class SignUpSerializer(serializers.Serializer, UserValidatorMixin):
             'username')
 
 
-class TokenSerializer(serializers.Serializer, UserValidatorMixin):
+class TokenSerializer(serializers.Serializer, validators.UserValidatorMixin):
     """Сериалайзер для получения токена."""
 
     username = serializers.CharField(
@@ -41,7 +42,9 @@ class TokenSerializer(serializers.Serializer, UserValidatorMixin):
             'confirmation_code')
 
 
-class UserSerializer(serializers.ModelSerializer, UserValidatorMixin):
+class UserSerializer(
+    serializers.ModelSerializer, validators.UserValidatorMixin
+):
     """Сериализатор для кастомной модели пользователя"""
     username = serializers.CharField(
         required=True,
@@ -64,7 +67,9 @@ class AuthorSerializer(UserSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     """Сериализатор для категорий."""
     slug = serializers.SlugField(
-        max_length=settings.SLUG_LENGTH, min_length=None, allow_blank=False)
+        max_length=settings.SLUG_LENGTH,
+        allow_blank=False,
+        validators=[validators.validate_slug])
 
     class Meta:
         model = Category
@@ -147,18 +152,14 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context['request']
-        if request.method == 'GET':
-            return data
-        author = request.user
-        title_id = self.context.get('view').kwargs.get('title_id')
-        title = get_object_or_404(Title, pk=title_id)
-        if (
-            request.method == 'POST'
-            and Review.objects.filter(title=title, author=author).exists()
-        ):
-            raise ValidationError(
-                'Больше одного отзыва на title писать нельзя'
-            )
+        if request.method == 'POST':
+            author = request.user
+            title_id = self.context.get('view').kwargs.get('title_id')
+            title = get_object_or_404(Title, pk=title_id)
+            if Review.objects.filter(title=title, author=author).exists():
+                raise ValidationError(
+                    'Больше одного отзыва на title писать нельзя'
+                )
         return data
 
 
@@ -172,4 +173,4 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         fields = '__all__'
         model = Comment
-        read_only_fields = ('review', 'author')
+        read_only_fields = ('review',)

@@ -8,18 +8,18 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from api.filters import TitlesFilter
+from api.permissions import (IsAdminOrModeratorOrAuthor, IsAdminOrReadOnly,
+                             IsAdminOrSuperUser)
+from api.serializers import (AuthorSerializer, CategorySerializer,
+                             CommentSerializer, GenreSerializer,
+                             ReviewSerializer, SignUpSerializer,
+                             TitleReadSerializer, TitleWriteSerializer,
+                             TokenSerializer, UserSerializer)
+from api.utils import generate_confirmation_code, send_confirmation_code
 from reviews.models import Category, Genre, Review, Title
 from users.models import CustomUser as User
-
-from .filters import TitlesFilter
-from .permissions import (IsAdminOrModeratorOrAuthor, IsAdminOrReadOnly,
-                          IsAdminOrSuperUser)
-from .serializers import (AuthorSerializer, CategorySerializer,
-                          CommentSerializer, GenreSerializer, ReviewSerializer,
-                          SignUpSerializer, TitleReadSerializer,
-                          TitleWriteSerializer, TokenSerializer,
-                          UserSerializer)
-from .utils import generate_confirmation_code, send_confirmation_code
 
 
 class RegisterView(APIView):
@@ -32,14 +32,17 @@ class RegisterView(APIView):
         username = serializer.validated_data.get('username')
         confirmation_code = generate_confirmation_code()
         try:
-            User.objects.get_or_create(email=email, username=username)
-        except IntegrityError:
+            user, _ = User.objects.get_or_create(
+                email=email, username=username)
+        except IntegrityError as error:
+            dublicate = str(error).split(' ')[-1].split('.')[-1]  # некрасивое
+            mistake = 'username' if dublicate == 'email' else 'email'
             return Response(
-                'Пользователь с таким email или username уже зарегистрирован, \
-                    но часть данных не совпадает',
+                f'Пользователь с таким {dublicate} уже зарегистрирован, '
+                f'но {mistake} указан неверный',
                 status=status.HTTP_400_BAD_REQUEST)
-        User.objects.filter(email=email).update(
-            confirmation_code=generate_confirmation_code())
+        user.confirmation_code = generate_confirmation_code()
+        user.save()
         send_confirmation_code(email, confirmation_code)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -55,8 +58,8 @@ class TokenView(APIView):
             User,
             username=username,
         )
-        if ((confirmation_code != user.confirmation_code)
-                or (confirmation_code == ' ')):
+        if (confirmation_code != user.confirmation_code
+                or confirmation_code == ' '):
             return Response(
                 'Confirmation code is invalid',
                 status=status.HTTP_400_BAD_REQUEST)
@@ -83,14 +86,14 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=(permissions.IsAuthenticated,),
         url_path='me')
     def user_info(self, request):
-        user = get_object_or_404(User, id=request.user.id)
-        serializer = AuthorSerializer(
-            user, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        if request.method == 'PATCH':
+        if request.method == 'GET':
+            serializer = AuthorSerializer(request.user)
+        else:
+            serializer = AuthorSerializer(
+                request.user, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class CLDMixinSet(
@@ -133,7 +136,6 @@ class TitleViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrModeratorOrAuthor]
     pagination_class = PageNumberPagination
-    filter_backends = [filters.SearchFilter]
     serializer_class = ReviewSerializer
 
     def title_query(self):

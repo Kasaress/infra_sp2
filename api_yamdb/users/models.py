@@ -1,9 +1,8 @@
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
-from django.core.exceptions import ValidationError
-from django.core.validators import RegexValidator
 from django.db import models
+from reviews import validators
 
 ROLE_CHOICES = (
     (settings.USER, 'Пользователь'),
@@ -12,27 +11,7 @@ ROLE_CHOICES = (
 )
 
 
-class UserValidatorMixin:
-    username = models.CharField(
-        max_length=settings.USER_NAMES_LENGTH,
-        verbose_name='Никнейм',
-        unique=True,
-        null=True,
-        validators=[RegexValidator(
-            regex=r'^[\w.@+-]+$',
-            message='Юзернейм содержит запрещенный символ'
-        )]
-    )
-
-    def validate_username(self, value):
-        if value == 'me':
-            raise ValidationError(
-                "Запрещено использовать 'me' в качестве никнейма"
-            )
-        return value
-
-
-class CustomUser(AbstractUser, UserValidatorMixin):  # type: ignore
+class CustomUser(AbstractUser):  # type: ignore
     """Кастомная модель User.
        Позволяет при создании запрашивать емейл и юзернейм.
     """
@@ -41,6 +20,7 @@ class CustomUser(AbstractUser, UserValidatorMixin):  # type: ignore
         unique=True,
         blank=False,
         max_length=settings.USER_NAMES_LENGTH,
+        validators=[validators.validate_name, ]
     )
     email: str = models.EmailField(
         'E-mail address',
@@ -63,9 +43,9 @@ class CustomUser(AbstractUser, UserValidatorMixin):  # type: ignore
         blank=True
     )
     role: str = models.CharField(
-        max_length=max((len(role) for role, _ in ROLE_CHOICES)),
+        max_length=max(len(role) for role, _ in ROLE_CHOICES),
         choices=ROLE_CHOICES,
-        default='user'
+        default=settings.USER
     )
     confirmation_code: str = models.CharField(
         max_length=settings.CONFIRMATION_CODE_LEN, null=True,
@@ -88,7 +68,7 @@ class CustomUser(AbstractUser, UserValidatorMixin):  # type: ignore
 
     @property
     def is_admin(self):
-        return ((self.role == settings.ADMIN)
+        return (self.role == settings.ADMIN
                 or self.is_superuser or self.is_staff)
 
     @property

@@ -14,15 +14,20 @@ class CommentAdmin(admin.ModelAdmin):
     search_fields = ('review',)
 
 
-class TitleAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'year', 'description')
-    search_fields = ('name', 'category', 'year')
-    list_filter = ('category',)
-
-
 class GenreAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
     search_fields = ('name',)
+
+
+class TabularInlineGenre(admin.TabularInline):
+    model = Genre.titles.through
+
+
+class TitleAdmin(admin.ModelAdmin):
+    list_display = ('name', 'category', 'year', 'description')
+    search_fields = ('name', 'category', 'year')
+    list_filter = ('category', 'genre')
+    inlines = [TabularInlineGenre, ]
 
 
 class CategoryAdmin(admin.ModelAdmin):

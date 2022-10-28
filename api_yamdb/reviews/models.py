@@ -1,19 +1,24 @@
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from reviews.validators import validate_year
+
+from reviews.validators import validate_year, validate_slug
 from users.models import CustomUser as User
 
 
 class GenreCategory(models.Model):
-    name = models.CharField(max_length=settings.NAME_LENGTH,)
-    slug = models.SlugField(max_length=settings.SLUG_LENGTH, unique=True)
+    name = models.CharField(
+        max_length=settings.NAME_LENGTH,
+    )
+    slug = models.SlugField(
+        max_length=settings.SLUG_LENGTH,
+        unique=True,
+        validators=[validate_slug, ]
+    )
 
     class Meta:
         abstract = True
         ordering = ['-id']
-        verbose_name = 'Жанр-Категория'
-        verbose_name_plural = 'Жанры-Категории'
 
     def __str__(self):
         return self.name
@@ -45,7 +50,6 @@ class Title(models.Model):
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
-        related_name='titles',
         verbose_name='Категории',
         blank=True,
         null=True,
@@ -62,6 +66,7 @@ class Title(models.Model):
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
         ordering = ('name',)
+        default_related_name = 'titles'
 
     def __str__(self):
         return self.name
@@ -101,17 +106,21 @@ class Review(ParentingModel):
     title = models.ForeignKey(
         Title,
         on_delete=models.CASCADE,
-        related_name='reviews'
     )
     score = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(settings.MIN_SCORE),
-                    MaxValueValidator(settings.MAX_SCORE)]
+                    MaxValueValidator(settings.MAX_SCORE)],
+        error_messages={
+            'validators': f'Поставьте оценку от '
+                          f'{settings.MIN_SCORE} до {settings.MAX_SCORE}'
+        },
+        default=settings.MAX_SCORE
     )
 
     class Meta(ParentingModel.Meta):
-        ordering = ['-id']
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
+        default_related_name = 'reviews'
         constraints = [
             models.UniqueConstraint(
                 fields=('title', 'author',),
@@ -124,10 +133,9 @@ class Comment(ParentingModel):
     review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,
-        related_name="comments"
     )
 
     class Meta(ParentingModel.Meta):
-        ordering = ['-id']
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
+        default_related_name = 'comments'
