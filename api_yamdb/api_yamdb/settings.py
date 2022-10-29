@@ -164,11 +164,10 @@ EMAIL_LENGTH = 254
 MIN_SCORE = 1
 MAX_SCORE = 10
 
+SLUG_PATTERN = r'^[-a-zA-Z0-9_]+$'
+USERNAME_PATTERN = r'^[\w.@+-]+$'
 DUPLICATE_EMAIL_MESSAGE = 'Пользователь с таким email уже зарегистрирован, но указан неверный username.'
 DUPLICATE_USERNAME_MESSAGE = 'Пользователь с таким username уже зарегистрирован, но указан неверный email.'
-SLUG_ERROR_MESSAGE = 'Адрес категории не соответствует шаблону: ^[-a-zA-Z0-9_]+$'
+SLUG_ERROR_MESSAGE = f'Адрес категории не соответствует шаблону: {SLUG_PATTERN}'
 NAME_ME_ERROR_MESSAGE = 'Запрещено использовать "me" в качестве никнейма'
 YEAR_ERROR_MESSAGE = 'Значение года не может быть больше текущего'
-
-FORBIDDEN_SYMBOLS = r'^[\w.@+-]+$'
-SLUG_PATTERN = r'^[-a-zA-Z0-9_]+$'

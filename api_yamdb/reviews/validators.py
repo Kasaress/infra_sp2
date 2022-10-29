@@ -27,18 +27,12 @@ class UserValidatorMixin:
 def validate_name(value):
     if value == 'me':
         raise ValidationError(settings.NAME_ME_ERROR_MESSAGE)
-    bad_symbols = [
-        symbol for symbol in settings.FORBIDDEN_SYMBOLS if symbol in value
-    ]
-    if bad_symbols:
-        # forbidden_symbols = r"^[\w.@+-]+$"
+    checked_username = re.match(settings.USERNAME_PATTERN, value)
+    forbidden_symbols = (re.sub(r'[\w.@+-]', r'', value))
+    if checked_username is None:
         raise ValidationError(
             f'Юзернейм содержит запрещенные символы:'
-            f'{" ".join(str(symbol) for symbol in bad_symbols)}'
-            # f'{"".join(set(re.sub(settings.FORBIDDEN_SYMBOLS, "", value)))}'
-            # некорректно работает с нашим паттерном, а если даже будет,
-            # выведет разрешенные символы, а не запрещенные
-            # f'{re.sub(forbidden_symbols, "", value)}'  # не меняет строчку
+            f'{forbidden_symbols}'
         )
     return value
 
