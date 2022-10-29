@@ -85,10 +85,21 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class GenreSerializer(serializers.ModelSerializer):
     """Сериализатор для жанров."""
+    slug = serializers.SlugField(
+        max_length=settings.SLUG_LENGTH,
+        allow_blank=False,
+        validators=[validators.validate_slug])
+
     class Meta:
         model = Genre
         fields = ('name', 'slug',)
         lookup_field = 'slug'
+
+    def validate_slug(self, value):
+        if Genre.objects.filter(slug=value).exists():
+            raise serializers.ValidationError(
+                'Жанр с таким slug уже существует!')
+        return value
 
 
 class TitleReadSerializer(serializers.ModelSerializer):

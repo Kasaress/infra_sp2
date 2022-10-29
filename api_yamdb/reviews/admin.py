@@ -24,10 +24,15 @@ class TabularInlineGenre(admin.TabularInline):
 
 
 class TitleAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'year', 'description')
+    list_display = ('name', 'category', 'year', 'description', 'get_genres')
     search_fields = ('name', 'category', 'year')
     list_filter = ('category', 'genre')
-    inlines = [TabularInlineGenre, ]
+    inlines = (TabularInlineGenre, )
+
+    def get_genres(self, title):
+        return ', '.join(genre.name for genre in title.genre.all())
+
+    get_genres.short_description = 'Жанры'
 
 
 class CategoryAdmin(admin.ModelAdmin):

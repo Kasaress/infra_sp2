@@ -40,17 +40,24 @@ class Category(GenreCategory):
 
 class Title(models.Model):
     """Произведения."""
-    name = models.CharField(max_length=settings.NAME_LENGTH)
+    name = models.CharField(
+        max_length=settings.NAME_LENGTH,
+        verbose_name='Название'
+    )
     year = models.PositiveIntegerField(
         validators=[validate_year],
         verbose_name='Год выпуска',
         db_index=True
     )
-    description = models.TextField(blank=True, null=True)
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Описание'
+    )
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
-        verbose_name='Категории',
+        verbose_name='Категория',
         blank=True,
         null=True,
         help_text='Выберите категорию',
@@ -114,7 +121,9 @@ class Review(ParentingModel):
             'validators': f'Поставьте оценку от '
                           f'{settings.MIN_SCORE} до {settings.MAX_SCORE}'
         },
-        default=settings.MAX_SCORE
+        default=(
+            (settings.MAX_SCORE - settings.MIN_SCORE) // 2 + settings.MIN_SCORE
+        )
     )
 
     class Meta(ParentingModel.Meta):

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import IntegrityError
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
@@ -8,6 +9,8 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from reviews.models import Category, Genre, Review, Title
+from users.models import CustomUser as User
 
 from api.filters import TitlesFilter
 from api.permissions import (IsAdminOrModeratorOrAuthor, IsAdminOrReadOnly,
@@ -18,8 +21,6 @@ from api.serializers import (AuthorSerializer, CategorySerializer,
                              TitleReadSerializer, TitleWriteSerializer,
                              TokenSerializer, UserSerializer)
 from api.utils import generate_confirmation_code, send_confirmation_code
-from reviews.models import Category, Genre, Review, Title
-from users.models import CustomUser as User
 
 
 class RegisterView(APIView):
@@ -34,12 +35,14 @@ class RegisterView(APIView):
         try:
             user, _ = User.objects.get_or_create(
                 email=email, username=username)
-        except IntegrityError as error:
-            dublicate = str(error).split(' ')[-1].split('.')[-1]  # некрасивое
-            mistake = 'username' if dublicate == 'email' else 'email'
+        except IntegrityError:
+            message = (
+                settings.DUPLICATE_EMAIL_MESSAGE
+                if User.objects.filter(email=email).exists()
+                else settings.DUPLICATE_USERNAME_MESSAGE
+            )
             return Response(
-                f'Пользователь с таким {dublicate} уже зарегистрирован, '
-                f'но {mistake} указан неверный',
+                message,
                 status=status.HTTP_400_BAD_REQUEST)
         user.confirmation_code = generate_confirmation_code()
         user.save()
